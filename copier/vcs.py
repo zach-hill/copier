@@ -3,7 +3,7 @@ import os
 import re
 import sys
 from contextlib import suppress
-from pathlib import Path
+from pathlib import Path, PurePath
 from tempfile import mkdtemp
 from warnings import warn
 
@@ -100,7 +100,9 @@ def get_repo(url: str) -> OptStr:
     return None
 
 
-def checkout_latest_tag(local_repo: StrOrPath, use_prereleases: OptBool = False) -> str:
+def checkout_latest_tag(local_repo: StrOrPath,
+                        use_prereleases: OptBool = False,
+                        tag_prefix: str = None) -> str:
     """Checkout latest git tag and check it out, sorted by PEP 440.
 
     Parameters:
@@ -108,9 +110,25 @@ def checkout_latest_tag(local_repo: StrOrPath, use_prereleases: OptBool = False)
             A git repository in the local filesystem.
         use_prereleases:
             If `False`, skip prerelease git tags.
+        tag_prefix:
+            If given, filters for tags with a given matched prefix.
     """
     with local.cwd(local_repo):
-        all_tags = filter(valid_version, git("tag").split())
+        all_tags = git("tag").split()
+        if tag_prefix:
+            if "*" not in tag_prefix:
+                if not tag_prefix.endswith("/*"):
+                    if tag_prefix.endswith("/"):
+                        tag_prefix = f"${tag_prefix}*"
+                    elif tag_prefix.endswith("*"):
+                        tag_prefix = f"{tag_prefix[:-1]}/*"
+                    else:
+                        tag_prefix = f"${tag_prefix}/*"
+            all_tags = [
+                tag_path.name for tag in all_tags
+                if (tag_path := PurePath(tag)).match(tag_prefix)
+            ]
+        all_tags = filter(valid_version, all_tags)
         if not use_prereleases:
             all_tags = filter(
                 lambda tag: not version.parse(tag).is_prerelease, all_tags

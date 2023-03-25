@@ -110,6 +110,9 @@ class UnknownCopierVersionWarning(UserWarning, CopierWarning):
 class OldTemplateWarning(UserWarning, CopierWarning):
     """Template was designed for an older Copier version."""
 
+class TagsPrefixWithoutSubdirectoryWarning(UserWarning, CopierWarning):
+    """Template has tags_prefix set without subdirectory."""
+
 
 class DirtyLocalWarning(UserWarning, CopierWarning):
     """Changes and untracked files present in template."""

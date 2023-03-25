@@ -23,6 +23,7 @@ from .errors import (
     InvalidConfigFileError,
     MultipleConfigFilesError,
     OldTemplateWarning,
+    TagsPrefixWithoutSubdirectoryWarning,
     UnknownCopierVersionWarning,
     UnsupportedVersionError,
 )
@@ -434,6 +435,23 @@ class Template:
         ]
 
     @cached_property
+    def tag_prefix(self) -> Optional[str]:
+        """Set the globbable tag prefix to look for when updating subprojects.
+
+        See [tag_prefix][].
+        """
+        tag_prefix = self.config_data.get("tag_prefix", None)
+        if not self.subdirectory and tag_prefix:
+            warn(
+                f"This template was configured with a tag_prefix '{tag_prefix}', "
+                f"but your subdirectory is not set."
+                f"This may be unintentional, as these are usually used together.",
+                TagsPrefixWithoutSubdirectoryWarning,
+            )
+
+        return tag_prefix
+
+    @cached_property
     def templates_suffix(self) -> str:
         """Get the suffix defined for templates.
 
@@ -457,7 +475,7 @@ class Template:
         if self.vcs == "git":
             result = Path(clone(self.url_expanded, self.ref))
             if self.ref is None:
-                checkout_latest_tag(result, self.use_prereleases)
+                checkout_latest_tag(result, self.use_prereleases, self.tag_prefix)
         if not result.is_dir():
             raise ValueError("Local template must be a directory.")
         return result.absolute()
